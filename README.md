@@ -139,6 +139,3 @@ These limitations are consistent with standard academic asset-pricing exercises.
 ```
 
 ---
-
-## Resume-ready description
-> Built a cross-sectional asset pricing framework using Fama–French 25 Size–Book-to-Market portfolios; implemented Fama–MacBeth regressions with Newey–West inference, robustness checks, and portfolio-based validation in a Streamlit application.
