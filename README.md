@@ -137,5 +137,11 @@ These limitations are consistent with standard academic asset-pricing exercises.
 ├── requirements.txt
 └── README.md
 ```
+## Live Demo / Web App
 
+You can try a live deploy of the app here:
+
+[https://algotradingbacktest.streamlit.app/](https://algotradingbacktest.streamlit.app/](https://cross-sectional-asset-pricing.streamlit.app)
+
+Use this link to launch the app in your browser without cloning the repo.  
 ---
