@@ -6,3 +6,4 @@ statsmodels
 pandas_datareader
 matplotlib
 tqdm
+setuptools
