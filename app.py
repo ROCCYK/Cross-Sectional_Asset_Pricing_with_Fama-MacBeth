@@ -82,27 +82,43 @@ def fama_macbeth(Rx: pd.DataFrame, beta_dict: dict, factor_cols, min_assets: int
         return pd.DataFrame(columns=["const"] + list(factor_cols))
     return pd.DataFrame(gammas).sort_index()
 
-def predicted_ls_portfolio(Rx: pd.DataFrame, beta_dict: dict, gammas: pd.DataFrame, factor_cols, top: float = 0.2, min_assets: int = 20):
+def predicted_ls_portfolio(
+    Rx: pd.DataFrame,
+    beta_dict: dict,
+    gammas: pd.DataFrame,
+    factor_cols,
+    top: float = 0.2,
+    min_assets: int = 20,
+    lag_months: int = 1,   # <-- NEW: trade at t using gamma from t-lag
+):
     """
     Long-short on predicted returns across the 25 portfolios.
+
+    If lag_months=1:
+      - Form signal for month t using gamma from month (t-1)
+      - Evaluate realized returns in month t
     """
     rows = []
     for date in gammas.index:
         if date not in beta_dict:
             continue
-        B = beta_dict[date]
-        g = gammas.loc[date]
 
+        # NEW: use past gamma to avoid look-ahead
+        g_date = date - pd.offsets.MonthEnd(lag_months)
+        if g_date not in gammas.index:
+            continue
+
+        B = beta_dict[date]          # betas available at 'date' (estimated from past window)
+        g = gammas.loc[g_date]       # lagged gamma
         common = Rx.columns.intersection(B.index)
         if len(common) < min_assets:
             continue
 
-        y = Rx.loc[date, common]
+        y = Rx.loc[date, common]     # realized excess returns at 'date'
         Bk = B.loc[common, list(factor_cols)]
 
         pred = g["const"] + (Bk.mul(g[list(factor_cols)], axis=1)).sum(axis=1)
         df = pd.DataFrame({"pred": pred, "ret": y}).dropna()
-
         if len(df) < min_assets:
             continue
 
@@ -203,6 +219,8 @@ with st.sidebar:
                              help="0 usually = value-weighted monthly returns, 1 usually = equal-weighted.")
 
     st.header("Model")
+    trade_lag = st.slider("Trading lag (months)", 0, 3, 1, 1,
+                      help="0 = in-sample (look-ahead). 1 = realistic: use gamma_{t-1} to trade month t.")
     model_choice = st.selectbox("Factor model", ["FF3", "FF5", "FF5 + Momentum"], index=0)
     window = st.slider("Rolling beta window (months)", 24, 120, 60, 6)
     min_frac = st.slider("Min non-missing fraction", 0.50, 1.00, 0.80, 0.05)
@@ -299,7 +317,13 @@ with tab_main:
 
     # L/S predicted returns across 25 portfolios
     with st.spinner("Building predicted-return long/short portfolio..."):
-        pnl = predicted_ls_portfolio(Rx, beta_dict, gammas, factor_cols=factor_cols, top=top, min_assets=20)
+        pnl = predicted_ls_portfolio(
+    Rx, beta_dict, gammas,
+    factor_cols=factor_cols,
+    top=top,
+    min_assets=20,
+    lag_months=trade_lag
+)
 
     st.subheader("Predicted-Return Long/Short (across FF25 portfolios)")
     if pnl.empty:
